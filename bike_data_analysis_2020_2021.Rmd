@@ -1,0 +1,177 @@
+---
+title: "bike_data_analysis_2020_2021"
+author: "Calvin"
+date: "02/06/2021"
+output: html_document
+---
+
+# Ask
+
+* The goal of the task is to increase conversion rate for casual riders into annual members.
+* We want to investigate the question that might lead to our goal:
+" How do annual members and casual riders use Cyclistic bikes differently"
+
+# Prepare
+
+* The data used is first-party data collected by Cyclistic. (i.e data is ROCCC)
+* Now to check data integrity.
+
+```{r load packages, message=FALSE}
+library(tidyverse)
+library(sqldf)
+library(ggplot2)
+library(scales)
+```
+
+
+
+```{r read data, message=FALSE}
+apr_2021 <- read_csv("bike_data/202104-divvy-tripdata.csv")
+mar_2021 <- read_csv("bike_data/202103-divvy-tripdata.csv")
+feb_2021 <- read_csv("bike_data/202102-divvy-tripdata.csv")
+jan_2021 <- read_csv("bike_data/202101-divvy-tripdata.csv")
+dec_2020 <- read_csv("bike_data/202012-divvy-tripdata.csv")
+nov_2020 <- read_csv("bike_data/202011-divvy-tripdata.csv")
+oct_2020 <- read_csv("bike_data/202010-divvy-tripdata.csv")
+sept_2020 <- read_csv("bike_data/202009-divvy-tripdata.csv")
+aug_2020 <- read_csv("bike_data/202008-divvy-tripdata.csv")
+july_2020 <- read_csv("bike_data/202007-divvy-tripdata.csv")
+june_2020 <- read_csv("bike_data/202006-divvy-tripdata.csv")
+may_2020 <- read_csv("bike_data/202005-divvy-tripdata.csv")
+apr_2020 <- read_csv("bike_data/202004-divvy-tripdata.csv")
+
+# check type of variable in all data
+str(apr_2021)
+str(mar_2021)
+str(feb_2021)
+str(jan_2021)
+str(dec_2020)
+
+# found station id is num type before nov_2020
+str(nov_2020)
+str(oct_2020)
+str(sept_2020)
+str(aug_2020)
+str(july_2020) 
+str(june_2020)
+str(may_2020)
+str(apr_2020)
+```
+
+
+# Process
+
+* We want to clean data if contain any missing value and do some transformation for additional information.
+
+
+``` {r combine data}
+# change variable type
+nov_2020 <- nov_2020 %>% mutate(start_station_id = as.character(start_station_id),
+                    end_station_id = as.character(end_station_id))
+
+oct_2020 <- oct_2020 %>% mutate(start_station_id = as.character(start_station_id),
+                    end_station_id = as.character(end_station_id))
+
+sept_2020 <-sept_2020 %>% mutate(start_station_id = as.character(start_station_id),
+                    end_station_id = as.character(end_station_id))
+
+aug_2020 <-aug_2020 %>% mutate(start_station_id = as.character(start_station_id),
+                    end_station_id = as.character(end_station_id))
+
+july_2020 <- july_2020 %>% mutate(start_station_id = as.character(start_station_id),
+                    end_station_id = as.character(end_station_id))
+
+june_2020 <- june_2020 %>% mutate(start_station_id = as.character(start_station_id),
+                    end_station_id = as.character(end_station_id))
+
+may_2020 <- may_2020 %>% mutate(start_station_id = as.character(start_station_id),
+                    end_station_id = as.character(end_station_id))
+
+apr_2020 <- apr_2020 %>% mutate(start_station_id = as.character(start_station_id),
+                    end_station_id = as.character(end_station_id))
+
+
+
+# combine all the variables
+all_bike_data <- bind_rows(apr_2021,mar_2021,feb_2021,jan_2021,dec_2020,nov_2020,
+                           oct_2020,sept_2020,aug_2020,july_2020,june_2020,may_2020,apr_2020)
+```
+
+```{r cleaning and transforming}
+
+# drop some irrelevant columns
+all_bike_data <- all_bike_data %>% select(-c(start_lat, start_lng, end_lat, end_lng))
+
+# check missing values
+
+colSums(is.na(all_bike_data))
+
+# There are some missing value in station id/name. But it is OK since we mainly want to investigate 
+# difference of membership type.
+
+# rename member_casual
+all_bike_data <- all_bike_data %>% rename(membership = member_casual)
+
+# Now add ride length by subtract ended_at - started_at
+all_bike_data <- all_bike_data %>% mutate(ride_length = ended_at - started_at)
+
+# We also want information of days of week
+all_bike_data <- all_bike_data %>% mutate(day_of_week =  weekdays(as.Date(all_bike_data$started_at)))
+
+# Remove negative length
+all_bike_data <- all_bike_data %>% filter(ride_length >=0)
+
+```
+# Analyze
+
+```{r Analyze by visualization}
+
+# check average ride length for different membership
+aggregate(all_bike_data$ride_length ~ all_bike_data$membership, FUN = mean)
+aggregate(all_bike_data$ride_length ~ all_bike_data$membership, FUN = median)
+
+all_bike_data %>% 
+  group_by(membership) %>%
+  summarize(Average_ride_length = mean(ride_length)) %>%
+  ggplot(., aes(x=membership, y= Average_ride_length, fill = membership)) +
+  geom_bar(stat='identity') +
+  labs(title="Average ride time for Casual vs Member", y = "Average ride length in second") +
+  scale_y_continuous(label = number)
+```
+
+```{r message=FALSE}
+
+# use to correct order in graph
+day_level = c('Monday','Tuesday',"Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
+
+all_bike_data %>% 
+  group_by(membership, day_of_week) %>%
+  summarize(Average_ride_length = mean(ride_length), .groups = 'drop') %>%
+  ggplot(., aes(x=factor(day_of_week, level = day_level ), y= Average_ride_length, fill = membership)) +
+  geom_bar(stat='identity',position = "dodge") +
+  labs(title="Average ride time for Casual vs Member in day of week", y = "Average ride length in second", x="day of the week")
+```
+```{r}
+
+# check count for each day of week
+
+# use to correct order in graph
+day_level = c('Monday','Tuesday',"Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
+# check if day of week relate to ride length and membership
+all_bike_data %>% 
+  group_by(membership, day_of_week) %>%
+  summarize(number_rides= n(), .groups="drop") %>%
+  arrange(factor(day_of_week, level = day_level))
+
+all_bike_data %>% 
+  ggplot(., aes(x=factor(day_of_week, level = day_level ), fill = membership)) +
+  geom_bar(position = "dodge") +
+  labs(title="Number of rides for Casual vs Member", y = "Number of rides", x="day of the week") +
+  scale_y_continuous(labels = number)
+```
+# Key finding
+
+* Average casual ride time is 2.7 times more than average member ride time.
+* Number of Casual ride are much higher in Friday and weekends than weekdays.
