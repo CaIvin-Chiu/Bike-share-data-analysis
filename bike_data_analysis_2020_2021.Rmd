@@ -47,7 +47,9 @@ str(feb_2021)
 str(jan_2021)
 str(dec_2020)
 
-# found station id is num type before nov_2020
+# found station_id is num_type for nov_2020 to apr_2020 , which is different to above
+# We need to change data type in order to combine them.
+
 str(nov_2020)
 str(oct_2020)
 str(sept_2020)
