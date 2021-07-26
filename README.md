@@ -11,6 +11,3 @@
 * Average Casual customer ride time are 2.7 times more than member customer ride time
 * Number of casual ride are signficant higher during Fridays and weekends.
 
-# About this project
-
-A case study for completing google data analytics certificates.
